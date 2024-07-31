@@ -1,4 +1,5 @@
 ## Analysis of determinants of primary care quality 
+## Jinyi Wang et al. 2024
 
 rm(list = ls())
 
