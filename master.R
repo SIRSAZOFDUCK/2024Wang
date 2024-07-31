@@ -1,14 +1,13 @@
 ## Analysis of determinants of primary care quality 
-## Gursh Hayer, Saran Shantikumar
-## saran.shantikumar@warwick.ac.uk
-## v1.0 Dec 2021
 
 rm(list = ls())
 
-list.of.packages <- c("fingertipsR","httr","jsonlite","ordinal","effects","ggeffects","foreign","MASS","Hmisc","data.table","dplyr","plyr","RColorBrewer","ggplot2","corrplot","rgdal","rgeos","raster","maptools","scales","plotly","latticeExtra","maps","classInt","grid","pals","reshape2","cowplot","sandwich","msm","Cairo")
+list.of.packages <- c("stringr","tibble","fingertipsR","httr","jsonlite","ordinal","effects","ggeffects","foreign","MASS","Hmisc","data.table","dplyr","plyr","RColorBrewer","ggplot2","corrplot","rgdal","rgeos","raster","maptools","scales","plotly","latticeExtra","maps","classInt","grid","pals","reshape2","cowplot","sandwich","msm","Cairo")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
+library(stringr)
+library(tibble)
 library(jsonlite)
 library(fingertipsR)
 library(httr)
@@ -43,7 +42,7 @@ library(effects)
 
 
 # Define directories
-path_project <- "C://Users/sirsa/OneDrive/Documents/2024Wang" # active directory
+path_project <- "C:/Users/sirsa/OneDrive/Documents/2024Wang" # active directory
 
 
 # set working directory 
@@ -267,9 +266,10 @@ data.all <- data.all5 %>%
   filter(total.listsize >= 1000) %>%
   # Remove unrequired columns 
   dplyr::select(-c(CCD19CD, fte.gp, fte.dpc, n.patients.per.dpc, total.female, total.over65)) %>%
-  # Remove rows with missing n.patients.per.gp and chronic disease, or no overall CQC rating
+  # Remove rows with missing n.patients.per.gp and chronic disease, or >10k patients per GP (data error?)
   filter(!is.na(n.patients.per.gp)) %>%
-  filter(!is.na(p.chronic.disease)) 
+  filter(!is.na(p.chronic.disease)) %>%
+  filter(n.patients.per.gp < 10000)
   
 
 # Factorise rating data
@@ -303,7 +303,7 @@ tabledata <- count(data.all$Overall)%>%
 total <- sum(tabledata$Count)
 tabledata <- tabledata %>% mutate (Percentage = round(100*(Count/total),1))
 
-Cairo(file="Figure 1A. CQC outcome distribution - overall.png", 
+Cairo(file="Figure 1. CQC outcome distribution.png", 
       type="png",
       units="in", 
       width=10, 
@@ -332,196 +332,10 @@ ggplot(na.omit(tabledata),
 
 dev.off()
 
-# Safe
-
-tabledata <- count(data.all$Safe)%>%
-  rename(Rating = x, Count = freq)
-
-total <- sum(tabledata$Count)
-tabledata <- tabledata %>% mutate (Percentage = round(100*(Count/total),1))
-
-Cairo(file="Figure 1B. CQC outcome distribution - safe.png", 
-      type="png",
-      units="in", 
-      width=10, 
-      height=4, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(tabledata),
-       aes(x = Count, y = Rating, fill = Rating)) +
-  geom_col() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.3))) +
-  #scale_x_log10() +
-  scale_y_discrete(limits = rev) +
-  scale_fill_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                               "Inadequate", "Insufficient evidence to rate"),
-                    values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                               "#FFAAA6", "#FF8C94")) +
-  geom_text(aes(label=paste0(Count," (",Percentage,"%)")), position=position_dodge(width=0.9), hjust=-0.1) +
-  labs(x = "Number of practices",
-       y = "Rating",
-       title = "Distribution of CQC outcomes: Safe",
-       caption = "Data source: Care Quality Commission, July 2024") +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off")
-
-dev.off()
-
-# Caring
-
-tabledata <- count(data.all$Caring)%>%
-  rename(Rating = x, Count = freq)
-
-total <- sum(tabledata$Count)
-tabledata <- tabledata %>% mutate (Percentage = round(100*(Count/total),1))
-
-Cairo(file="Figure 1C. CQC outcome distribution - caring.png", 
-      type="png",
-      units="in", 
-      width=10, 
-      height=4, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(tabledata),
-       aes(x = Count, y = Rating, fill = Rating)) +
-  geom_col() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.3))) +
-  #scale_x_log10() +
-  scale_y_discrete(limits = rev) +
-  scale_fill_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                               "Inadequate", "Insufficient evidence to rate"),
-                    values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                               "#FFAAA6", "#FF8C94")) +
-  geom_text(aes(label=paste0(Count," (",Percentage,"%)")), position=position_dodge(width=0.9), hjust=-0.1) +
-  labs(x = "Number of practices",
-       y = "Rating",
-       title = "Distribution of CQC outcomes: Caring",
-       caption = "Data source: Care Quality Commission, July 2024") +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off")
-
-dev.off()
-
-# Effective
-
-tabledata <- count(data.all$Effective)%>%
-  rename(Rating = x, Count = freq)
-
-total <- sum(tabledata$Count)
-tabledata <- tabledata %>% mutate (Percentage = round(100*(Count/total),1))
-
-Cairo(file="Figure 1D. CQC outcome distribution - effective.png", 
-      type="png",
-      units="in", 
-      width=10, 
-      height=4, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(tabledata),
-       aes(x = Count, y = Rating, fill = Rating)) +
-  geom_col() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.3))) +
-  #scale_x_log10() +
-  scale_y_discrete(limits = rev) +
-  scale_fill_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                               "Inadequate", "Insufficient evidence to rate"),
-                    values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                               "#FFAAA6", "#FF8C94")) +
-  geom_text(aes(label=paste0(Count," (",Percentage,"%)")), position=position_dodge(width=0.9), hjust=-0.1) +
-  labs(x = "Number of practices",
-       y = "Rating",
-       title = "Distribution of CQC outcomes: Effective",
-       caption = "Data source: Care Quality Commission, July 2024") +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off")
-
-dev.off()
-
-# Well-led
-
-tabledata <- count(data.all$Well.led)%>%
-  rename(Rating = x, Count = freq)
-
-total <- sum(tabledata$Count)
-tabledata <- tabledata %>% mutate (Percentage = round(100*(Count/total),1))
-
-Cairo(file="Figure 1E. CQC outcome distribution - well-led.png", 
-      type="png",
-      units="in", 
-      width=10, 
-      height=4, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(tabledata),
-       aes(x = Count, y = Rating, fill = Rating)) +
-  geom_col() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.3))) +
-  #scale_x_log10() +
-  scale_y_discrete(limits = rev) +
-  scale_fill_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                               "Inadequate", "Insufficient evidence to rate"),
-                    values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                               "#FFAAA6", "#FF8C94")) +
-  geom_text(aes(label=paste0(Count," (",Percentage,"%)")), position=position_dodge(width=0.9), hjust=-0.1) +
-  labs(x = "Number of practices",
-       y = "Rating",
-       title = "Distribution of CQC outcomes: Well-led",
-       caption = "Data source: Care Quality Commission, July 2024") +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off")
-
-dev.off()
-
-# Responsive
-
-tabledata <- count(data.all$Responsive)%>%
-  rename(Rating = x, Count = freq)
-
-total <- sum(tabledata$Count)
-tabledata <- tabledata %>% mutate (Percentage = round(100*(Count/total),1))
-
-Cairo(file="Figure 1F. CQC outcome distribution - responsive.png", 
-      type="png",
-      units="in", 
-      width=10, 
-      height=4, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(tabledata),
-       aes(x = Count, y = Rating, fill = Rating)) +
-  geom_col() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.3))) +
-  #scale_x_log10() +
-  scale_y_discrete(limits = rev) +
-  scale_fill_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                               "Inadequate", "Insufficient evidence to rate"),
-                    values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                               "#FFAAA6", "#FF8C94")) +
-  geom_text(aes(label=paste0(Count," (",Percentage,"%)")), position=position_dodge(width=0.9), hjust=-0.1) +
-  labs(x = "Number of practices",
-       y = "Rating",
-       title = "Distribution of CQC outcomes: Responsive",
-       caption = "Data source: Care Quality Commission, July 2024") +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off")
-
-dev.off()
-
-
 
 # 2. IMD distribution by CQC ratings ---------
 
-Cairo(file="Figure 2A. IMD distribution by CQC rating - overall.png", 
+Cairo(file="Figure 2. IMD distribution by CQC rating.png", 
       type="png",
       units="in", 
       width=4, 
@@ -549,149 +363,10 @@ ggplot(na.omit(data.all), aes(x = Overall, y = imd.score)) +
 
 dev.off()
 
-Cairo(file="Figure 2B. IMD distribution by CQC rating - safe.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Safe, y = imd.score)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Safe)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Safe)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "IMD (2019) score\n",
-       title = "IMD score distribution by CQC rating:\nSafe",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 2C. IMD distribution by CQC rating - caring.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Caring, y = imd.score)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Caring)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Caring)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "IMD (2019) score\n",
-       title = "IMD score distribution by CQC rating:\nCaring",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 2D. IMD distribution by CQC rating - effective.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Effective, y = imd.score)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Effective)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Effective)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "IMD (2019) score\n",
-       title = "IMD score distribution by CQC rating:\nEffective",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 2E. IMD distribution by CQC rating - well-led.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Well.led, y = imd.score)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Well.led)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Well.led)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "IMD (2019) score\n",
-       title = "IMD score distribution by CQC rating:\nWell-led",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 2F. IMD distribution by CQC rating - responsive.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Responsive, y = imd.score)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Responsive)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Responsive)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6")) +
-  labs(x = "\nRating",
-       y = "IMD (2019) score\n",
-       title = "IMD score distribution by CQC rating:\nResponsive",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
 
 # 3. Percent age over 65 years distribution by CQC ratings ---------
 
-Cairo(file="Figure 3A. Percent age over 65yr by CQC rating - overall.png", 
+Cairo(file="Figure 3. Percent age over 65yr by CQC rating - overall.png", 
       type="png",
       units="in", 
       width=4, 
@@ -719,149 +394,10 @@ ggplot(na.omit(data.all), aes(x = Overall, y = p.over65)) +
 
 dev.off()
 
-Cairo(file="Figure 3B. Percent age over 65yr by CQC rating - safe.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
 
-ggplot(na.omit(data.all), aes(x = Safe, y = p.over65)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Safe)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Safe)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of patients over 65 years\n",
-       title = "Percentage over 65 years by CQC rating:\nSafe",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+# 4. Percent females distribution by CQC ratings ---------
 
-dev.off()
-
-Cairo(file="Figure 3C. Percent age over 65yr by CQC rating - caring.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Caring, y = p.over65)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Caring)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Caring)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of patients over 65 years\n",
-       title = "Percentage over 65 years by CQC rating:\nCaring",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 3D. Percent age over 65yr by CQC rating - effective.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Effective, y = p.over65)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Effective)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Effective)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of patients over 65 years\n",
-       title = "Percentage over 65 years by CQC rating:\nEffective",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 3E. Percent age over 65yr by CQC rating - well-led.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Well.led, y = p.over65)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Well.led)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Well.led)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of patients over 65 years\n",
-       title = "Percentage over 65 years by CQC rating:\nWell-led",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 3F. Percent age over 65yr by CQC rating - responsive.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Responsive, y = p.over65)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Responsive)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Responsive)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of patients over 65 years\n",
-       title = "Percentage over 65 years by CQC rating:\nResponsive",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-# 4. Percent males distribution by CQC ratings ---------
-
-Cairo(file="Figure 4A. Percent females by CQC rating - overall.png", 
+Cairo(file="Figure 4. Percent females by CQC rating - overall.png", 
       type="png",
       units="in", 
       width=4, 
@@ -889,150 +425,10 @@ ggplot(na.omit(data.all), aes(x = Overall, y = p.female)) +
 
 dev.off()
 
-Cairo(file="Figure 4B. Percent females by CQC rating - safe.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Safe, y = p.female)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Safe)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Safe)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of female patients\n",
-       title = "Percentage females by CQC rating:\nSafe",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 4C. Percent females by CQC rating - caring.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Caring, y = p.female)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Caring)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Caring)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of female patients\n",
-       title = "Percentage females by CQC rating:\nCaring",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 4D. Percent females by CQC rating - effective.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Effective, y = p.female)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Effective)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Effective)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of female patients\n",
-       title = "Percentage females by CQC rating:\nEffective",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 4E. Percent females by CQC rating - well-led.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Well.led, y = p.female)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Well.led)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Well.led)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of female patients\n",
-       title = "Percentage females by CQC rating:\nWell-led",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 4F. Percent females by CQC rating - responsive.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Responsive, y = p.female)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Responsive)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Responsive)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Percentage of female patients\n",
-       title = "Percentage females by CQC rating:\nResponsive",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
 
 # 5. List size distribution by CQC ratings ---------
 
-Cairo(file="Figure 5A. List size distribution by CQC rating - overall.png", 
+Cairo(file="Figure 5. List size distribution by CQC rating - overall.png", 
       type="png",
       units="in", 
       width=4, 
@@ -1060,151 +456,10 @@ ggplot(na.omit(data.all), aes(x = Overall, y = total.listsize)) +
 
 dev.off()
 
-Cairo(file="Figure 5B. List size distribution by CQC rating - safe.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Safe, y = total.listsize)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Safe)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Safe)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "List size\n",
-       title = "List size by CQC rating:\nSafe",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 5C. List size distribution by CQC rating - caring.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Caring, y = total.listsize)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Caring)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Caring)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "List size\n",
-       title = "List size by CQC rating:\nCaring",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 5D. List size distribution by CQC rating - effective.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Effective, y = total.listsize)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Effective)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Effective)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "List size\n",
-       title = "List size by CQC rating:\nEffective",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 5E. List size distribution by CQC rating - well-led.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Well.led, y = total.listsize)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Well.led)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Well.led)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "List size\n",
-       title = "List size by CQC rating:\nWell-led",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 5F. List size distribution by CQC rating - responsive.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Responsive, y = total.listsize)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Responsive)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Responsive)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "List size\n",
-       title = "List size by CQC rating:\nResponsive",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-
 
 # 6. Chronic disease distribution by CQC ratings ---------
 
-Cairo(file="Figure 6A. Chronic disease proportion by CQC rating - overall.png", 
+Cairo(file="Figure 6. Chronic disease proportion by CQC rating - overall.png", 
       type="png",
       units="in", 
       width=4, 
@@ -1232,7 +487,9 @@ ggplot(na.omit(data.all), aes(x = Overall, y = p.chronic.disease)) +
 
 dev.off()
 
-Cairo(file="Figure 6B.Chronic disease proportion by CQC rating - safe.png", 
+# 7. QOF points by CQC ratings ----------------
+
+Cairo(file="Figure 7. Proportion of total QOF points by CQC rating - overall.png", 
       type="png",
       units="in", 
       width=4, 
@@ -1240,17 +497,17 @@ Cairo(file="Figure 6B.Chronic disease proportion by CQC rating - safe.png",
       pointsize=1, 
       dpi=1200)
 
-ggplot(na.omit(data.all), aes(x = Safe, y = p.chronic.disease)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Safe)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Safe)) +
+ggplot(na.omit(data.all), aes(x = Overall, y = p.qof)) +
+  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Overall)) +
+  geom_jitter(alpha = .15, size = 0.05, aes(color=Overall)) +
   #facet_grid(pared ~ public, margins = TRUE) +
   scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
                                 "Inadequate", "Insufficient evidence to rate"),
                      values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
                                 "#FFAAA6", "#FF8C94")) +
   labs(x = "\nRating",
-       y = "Chronic disease %\n",
-       title = "Chronic disease % by CQC rating:\nSafe",
+       y = "QOF points (% of total)\n",
+       title = "QOF points (% of total) by CQC rating:\nOverall",
        #caption = "Data source: Care Quality Commission, July 2024"
   ) +
   theme_bw() +
@@ -1260,7 +517,9 @@ ggplot(na.omit(data.all), aes(x = Safe, y = p.chronic.disease)) +
 
 dev.off()
 
-Cairo(file="Figure 6C.Chronic disease proportion by CQC rating - caring.png", 
+# 8. Patients per GP by CQC ratings ----------------
+
+Cairo(file="Figure 8. Patients per GP by CQC rating - overall.png", 
       type="png",
       units="in", 
       width=4, 
@@ -1268,17 +527,17 @@ Cairo(file="Figure 6C.Chronic disease proportion by CQC rating - caring.png",
       pointsize=1, 
       dpi=1200)
 
-ggplot(na.omit(data.all), aes(x = Caring, y = p.chronic.disease)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Caring)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Caring)) +
+ggplot(na.omit(data.all), aes(x = Overall, y = n.patients.per.gp)) +
+  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Overall)) +
+  geom_jitter(alpha = .15, size = 0.05, aes(color=Overall)) +
   #facet_grid(pared ~ public, margins = TRUE) +
   scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
                                 "Inadequate", "Insufficient evidence to rate"),
                      values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
                                 "#FFAAA6", "#FF8C94")) +
   labs(x = "\nRating",
-       y = "Chronic disease %\n",
-       title = "Chronic disease % by CQC rating:\nCaring",
+       y = "Patients per GP (FTE)\n",
+       title = "Patients per GP (FTE) by CQC rating:\nOverall",
        #caption = "Data source: Care Quality Commission, July 2024"
   ) +
   theme_bw() +
@@ -1288,7 +547,14 @@ ggplot(na.omit(data.all), aes(x = Caring, y = p.chronic.disease)) +
 
 dev.off()
 
-Cairo(file="Figure 6D.Chronic disease proportion by CQC rating - effective.png", 
+# 9. Presence of DCP by CQC rating
+
+# Calculate the proportion of "Yes" per group
+proportion_data <- data.all %>%
+  group_by(Overall) %>%
+  summarise(yes_proportion = 100*mean(dpc == "Yes"))
+
+Cairo(file="Figure 9. Proportion with AHP by CQC rating - overall.png", 
       type="png",
       units="in", 
       width=4, 
@@ -1296,79 +562,23 @@ Cairo(file="Figure 6D.Chronic disease proportion by CQC rating - effective.png",
       pointsize=1, 
       dpi=1200)
 
-ggplot(na.omit(data.all), aes(x = Effective, y = p.chronic.disease)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Effective)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Effective)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
+ggplot(na.omit(proportion_data), aes(x = Overall, y = yes_proportion, fill = Overall)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(breaks = c("Outstanding", "Good", "Requires improvement",
                                 "Inadequate", "Insufficient evidence to rate"),
                      values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
                                 "#FFAAA6", "#FF8C94")) +
   labs(x = "\nRating",
-       y = "Chronic disease %\n",
-       title = "Chronic disease % by CQC rating:\nEffective",
+       y = "Proportion with Allied Health Professional (%)\n",
+       title = "Proportion with AHPs by CQC rating:\nOverall",
        #caption = "Data source: Care Quality Commission, July 2024"
   ) +
+  geom_text(aes(label= paste0(round((yes_proportion),1),"%")), vjust=2) +
   theme_bw() +
   theme(panel.grid.major.y = element_blank(),
         legend.position = "off") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
-dev.off()
-
-Cairo(file="Figure 6E.Chronic disease proportion by CQC rating - well-led.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Well.led, y = p.chronic.disease)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Well.led)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Well.led)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Chronic disease %\n",
-       title = "Chronic disease % by CQC rating:\nWell-led",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-dev.off()
-
-Cairo(file="Figure 6F.Chronic disease proportion by CQC rating - responsive.png", 
-      type="png",
-      units="in", 
-      width=4, 
-      height=6, 
-      pointsize=1, 
-      dpi=1200)
-
-ggplot(na.omit(data.all), aes(x = Responsive, y = p.chronic.disease)) +
-  geom_boxplot(size = 0.45, alpha = 1,  aes(color=Responsive)) +
-  geom_jitter(alpha = .15, size = 0.05, aes(color=Responsive)) +
-  #facet_grid(pared ~ public, margins = TRUE) +
-  scale_color_manual(breaks = c("Outstanding", "Good", "Requires improvement",
-                                "Inadequate", "Insufficient evidence to rate"),
-                     values = c("#A8E6CE", "#DCEDC2", "#FFD3B5",
-                                "#FFAAA6", "#FF8C94")) +
-  labs(x = "\nRating",
-       y = "Chronic disease %\n",
-       title = "Chronic disease % by CQC rating:\nResponsive",
-       #caption = "Data source: Care Quality Commission, July 2024"
-  ) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        legend.position = "off") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 dev.off()
 
@@ -1376,7 +586,7 @@ dev.off()
 ## ADD QOF POINTS AND PATIENTS PER GP
 
 
-# 6. Regression for CQC ratings - see https://stats.idre.ucla.edu/r/dae/ordinal-logistic-regression/ -----------
+# 10. Regression for CQC ratings - see https://stats.idre.ucla.edu/r/dae/ordinal-logistic-regression/ -----------
 # More info here https://marissabarlaz.github.io/portfolio/ols/
 
 # Remove practice with insufficient evidence to rate
@@ -1390,13 +600,6 @@ data.all <- data.all %>%
   filter(Well.led != "Insufficient evidence to rate")
 
 # Factorise rating data to remove "Insufficient evidence" level
-# data.all$Overall <- factor(data.all$Overall, levels = c("Outstanding", "Good", "Requires improvement", "Inadequate"))
-# data.all$Safe <- factor(data.all$Safe, levels = c("Outstanding", "Good", "Requires improvement", "Inadequate"))
-# data.all$Caring <- factor(data.all$Caring, levels = c("Outstanding", "Good", "Requires improvement", "Inadequate"))
-# data.all$Effective <- factor(data.all$Effective, levels = c("Outstanding", "Good", "Requires improvement", "Inadequate"))
-# data.all$Well.led <- factor(data.all$Well.led, levels = c("Outstanding", "Good", "Requires improvement", "Inadequate"))
-# data.all$Responsive <- factor(data.all$Responsive, levels = c("Outstanding", "Good", "Requires improvement", "Inadequate"))
-
 data.all$Overall <- factor(data.all$Overall, levels = c("Inadequate","Requires improvement","Good","Outstanding"))
 data.all$Safe <- factor(data.all$Safe, levels = c("Inadequate","Requires improvement","Good","Outstanding"))
 data.all$Caring <- factor(data.all$Caring, levels = c("Inadequate","Requires improvement","Good","Outstanding"))
@@ -1446,11 +649,81 @@ exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for
 res1D <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
 res2D <- ctable
 
-write.csv(rbind(res2A,res2B,res2C,res2D),"Table 1A. Univariate CQC regression raw values - Overall.csv")
-write.csv(rbind(res1A,res1B,res1C,res1D),"Table 2A. Univariate CQC regression ORs and CIs - Overall.csv")
+# % chronic disease
+m <- polr(Overall ~ p.chronic.disease.quintile, data = data.all, Hess=TRUE)
+ctable <- coef(summary(m)) # store table of coefficient results
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
+(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
+ci <- confint.default(m) # Alternative CIs, assuming normality
+exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res1E <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res2E <- ctable
+
+# % QOF points
+m <- polr(Overall ~ p.qof.quintile, data = data.all, Hess=TRUE)
+ctable <- coef(summary(m)) # store table of coefficient results
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
+(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
+ci <- confint.default(m) # Alternative CIs, assuming normality
+exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res1F <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res2F <- ctable
+
+# patients per GP
+m <- polr(Overall ~ n.patients.per.gp.quintile, data = data.all, Hess=TRUE)
+ctable <- coef(summary(m)) # store table of coefficient results
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
+(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
+ci <- confint.default(m) # Alternative CIs, assuming normality
+exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res1G <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res2G <- ctable
+
+# AHP present
+m <- polr(Overall ~ dpc, data = data.all, Hess=TRUE)
+ctable <- coef(summary(m)) # store table of coefficient results
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
+(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
+ci <- confint.default(m) # Alternative CIs, assuming normality
+exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res1H <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
+res2H <- ctable
+
+# Create univariate results tables
+
+# ORs table
+uni.ors <- rbind(res1A,res1B,res1C,res1D,res1E,res1F,res1G,res1H) %>% as.data.frame()
+uni.ors <- tibble::rownames_to_column(uni.ors, var = "indicator")
+  
+# P values table
+uni.pvals <- rbind(res2A,res2B,res2C,res2D,res2E,res2F,res2G,res2H) %>% 
+  as.data.frame() %>%
+  dplyr::select(4) %>%
+  rownames_to_column(var = "indicator") 
+
+# Select overall p values only
+uni.pvals <- uni.pvals[seq(1, nrow(uni.pvals), by = 4),]
+  
+# Create single table
+uni.results <- uni.ors %>%
+  left_join(uni.pvals, by = "indicator") %>%
+  mutate("95% CI" = paste0("(",round(`2.5 %`,3)," - ",round(`97.5 %`,3),")")) %>%
+  mutate("Odds ratio" = round(OR,3)) %>%
+  mutate(`p value` = round(`p value`,3)) %>%
+  dplyr::select(indicator, `Odds ratio`, `95% CI`,`p value`) %>%
+  mutate(indicator = str_replace(indicator, "imd.score.quintile", "IMD score")) %>%
+  mutate(indicator = str_replace(indicator, "total.listsize.quintile", "List size")) %>%
+  mutate(indicator = str_replace(indicator, "p.female.quintile", "Female %")) %>%
+  mutate(indicator = str_replace(indicator, "p.over65.quintile", "Over-65 %")) %>%
+  mutate(indicator = str_replace(indicator, "p.chronic.disease.quintile", "Chronic disease %")) %>%
+  mutate(indicator = str_replace(indicator, "p.qof.quintile", "QOF performance")) %>%
+  mutate(indicator = str_replace(indicator, "n.patients.per.gp.quintile", "Patients per GP")) %>%
+  mutate(indicator = str_replace(indicator, "dpcYes", "Allied health professional")) 
+  
+write.csv(uni.results,"Table 1. Univariate regression.csv")
 
 # Fit ordered logit model - MULTIVARIATE
-m <- polr(Overall ~ imd.score.quintile + total.listsize.quintile + p.female.quintile + p.over65.quintile, data = data.all, Hess=TRUE)
+m <- polr(Overall ~ imd.score.quintile + total.listsize.quintile + p.female.quintile + p.over65.quintile + p.chronic.disease.quintile + p.qof.quintile + n.patients.per.gp.quintile + dpc, data = data.all, Hess=TRUE)
 summary(m)
 ctable <- coef(summary(m)) # store table of coefficient results
 p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
@@ -1459,288 +732,34 @@ ci <- confint.default(m) # Alternative CIs, assuming normality
 res4 <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
 res3 <- ctable
 
-write.csv(res3,"Table 3A. Multivariate CQC regression raw values - Overall.csv")
-write.csv(res4,"Table 4A. Multivariate CQC regression ORs and CIs - Overall.csv")
+# ORs table
+multi.ors <- res4 %>% 
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "indicator")
+
+# P values table
+multi.pvals <- res3 %>% 
+  as.data.frame() %>%
+  dplyr::select(4) %>%
+  rownames_to_column(var = "indicator")  %>%
+  dplyr::slice(1:8)
 
 
-#### DECIDE WHETHER TO DO IT FOR SUBSCORING OR NOT
+# Create single table
+multi.results <- multi.ors %>%
+  left_join(multi.pvals, by = "indicator") %>%
+  mutate("95% CI" = paste0("(",round(`2.5 %`,3)," - ",round(`97.5 %`,3),")")) %>%
+  mutate("Odds ratio" = round(OR,3)) %>%
+  mutate(`p value` = round(`p value`,3)) %>%
+  dplyr::select(indicator, `Odds ratio`, `95% CI`,`p value`) %>%
+  mutate(indicator = str_replace(indicator, "imd.score.quintile", "IMD score")) %>%
+  mutate(indicator = str_replace(indicator, "total.listsize.quintile", "List size")) %>%
+  mutate(indicator = str_replace(indicator, "p.female.quintile", "Female %")) %>%
+  mutate(indicator = str_replace(indicator, "p.over65.quintile", "Over-65 %")) %>%
+  mutate(indicator = str_replace(indicator, "p.chronic.disease.quintile", "Chronic disease %")) %>%
+  mutate(indicator = str_replace(indicator, "p.qof.quintile", "QOF performance")) %>%
+  mutate(indicator = str_replace(indicator, "n.patients.per.gp.quintile", "Patients per GP")) %>%
+  mutate(indicator = str_replace(indicator, "dpcYes", "Allied health professional")) 
 
-# IMD
-m <- polr(Safe ~ IMD2019.QUINTILE, data = data.all, Hess=TRUE)
-#summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res1A <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2A <- ctable
+write.csv(multi.results,"Table 2. Multivariate Univariate regression.csv")
 
-# List size
-m <- polr(Safe ~ LIST.SIZE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1B <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2B <- ctable
-
-# % male
-m <- polr(Safe ~ PERCENT.MALE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1C <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2C <- ctable
-
-# % over65
-m <- polr(Safe ~ PERCENT.OVER65, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1D <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2D <- ctable
-
-write.csv(rbind(res2A,res2B,res2C,res2D),"Table 1B. Univariate CQC regression raw values - Safe.csv")
-write.csv(rbind(res1A,res1B,res1C,res1D),"Table 2B. Univariate CQC regression ORs and CIs - Safe.csv")
-
-# Fir ordered logit model - MULTIVARIATE
-m <- polr(Safe ~ IMD2019.QUINTILE + LIST.SIZE.QUINTILE + PERCENT.MALE.QUINTILE + PERCENT.OVER65.QUINTILE, data = data.all, Hess=TRUE)
-summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-ctable <- cbind(ctable, "p value" = p) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res4 <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res3 <- ctable
-
-write.csv(res3,"Table 3B. Multivariate CQC regression raw values - Safe.csv")
-write.csv(res4,"Table 4B. Multivariate CQC regression ORs and CIs - Safe.csv")
-
-# IMD
-m <- polr(Caring ~ IMD2019.QUINTILE, data = data.all, Hess=TRUE)
-#summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res1A <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2A <- ctable
-
-# List size
-m <- polr(Caring ~ LIST.SIZE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1B <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2B <- ctable
-
-# % male
-m <- polr(Caring ~ PERCENT.MALE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1C <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2C <- ctable
-
-# % over65
-m <- polr(Caring ~ PERCENT.OVER65, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1D <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2D <- ctable
-
-write.csv(rbind(res2A,res2B,res2C,res2D),"Table 1C. Univariate CQC regression raw values - Caring.csv")
-write.csv(rbind(res1A,res1B,res1C,res1D),"Table 2C. Univariate CQC regression ORs and CIs - Caring.csv")
-
-# Fir ordered logit model - MULTIVARIATE
-m <- polr(Caring ~ IMD2019.QUINTILE + LIST.SIZE.QUINTILE + PERCENT.MALE.QUINTILE + PERCENT.OVER65.QUINTILE, data = data.all, Hess=TRUE)
-summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-ctable <- cbind(ctable, "p value" = p) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res4 <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res3 <- ctable
-
-write.csv(res3,"Table 3C. Multivariate CQC regression raw values - Caring.csv")
-write.csv(res4,"Table 4C. Multivariate CQC regression ORs and CIs - Caring.csv")
-
-# IMD
-m <- polr(Effective ~ IMD2019.QUINTILE, data = data.all, Hess=TRUE)
-#summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res1A <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2A <- ctable
-
-# List size
-m <- polr(Effective ~ LIST.SIZE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1B <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2B <- ctable
-
-# % male
-m <- polr(Effective ~ PERCENT.MALE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1C <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2C <- ctable
-
-# % over65
-m <- polr(Effective ~ PERCENT.OVER65, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1D <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2D <- ctable
-
-write.csv(rbind(res2A,res2B,res2C,res2D),"Table 1D. Univariate CQC regression raw values - Effective.csv")
-write.csv(rbind(res1A,res1B,res1C,res1D),"Table 2D. Univariate CQC regression ORs and CIs - Effective.csv")
-
-# Fir ordered logit model - MULTIVARIATE
-m <- polr(Effective ~ IMD2019.QUINTILE + LIST.SIZE.QUINTILE + PERCENT.MALE.QUINTILE + PERCENT.OVER65.QUINTILE, data = data.all, Hess=TRUE)
-summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-ctable <- cbind(ctable, "p value" = p) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res4 <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res3 <- ctable
-
-write.csv(res3,"Table 3D. Multivariate CQC regression raw values - Effective.csv")
-write.csv(res4,"Table 4D. Multivariate CQC regression ORs and CIs - Effective.csv")
-
-# IMD
-m <- polr(Well.led ~ IMD2019.QUINTILE, data = data.all, Hess=TRUE)
-#summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res1A <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2A <- ctable
-
-# List size
-m <- polr(Well.led ~ LIST.SIZE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1B <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2B <- ctable
-
-# % male
-m <- polr(Well.led ~ PERCENT.MALE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1C <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2C <- ctable
-
-# % over65
-m <- polr(Well.led ~ PERCENT.OVER65, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1D <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2D <- ctable
-
-write.csv(rbind(res2A,res2B,res2C,res2D),"Table 1E. Univariate CQC regression raw values - Well.led.csv")
-write.csv(rbind(res1A,res1B,res1C,res1D),"Table 2E. Univariate CQC regression ORs and CIs - Well.led.csv")
-
-# Fir ordered logit model - MULTIVARIATE
-m <- polr(Well.led ~ IMD2019.QUINTILE + LIST.SIZE.QUINTILE + PERCENT.MALE.QUINTILE + PERCENT.OVER65.QUINTILE, data = data.all, Hess=TRUE)
-summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-ctable <- cbind(ctable, "p value" = p) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res4 <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res3 <- ctable
-
-write.csv(res3,"Table 3E. Multivariate CQC regression raw values - Well.led.csv")
-write.csv(res4,"Table 4E. Multivariate CQC regression ORs and CIs - Well.led.csv")
-
-# IMD
-m <- polr(Responsive ~ IMD2019.QUINTILE, data = data.all, Hess=TRUE)
-#summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res1A <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2A <- ctable
-
-# List size
-m <- polr(Responsive ~ LIST.SIZE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1B <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2B <- ctable
-
-# % male
-m <- polr(Responsive ~ PERCENT.MALE.QUINTILE, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1C <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2C <- ctable
-
-# % over65
-m <- polr(Responsive ~ PERCENT.OVER65, data = data.all, Hess=TRUE)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-(ctable <- cbind(ctable, "p value" = p)) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res1D <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res2D <- ctable
-
-write.csv(rbind(res2A,res2B,res2C,res2D),"Table 1F. Univariate CQC regression raw values - Responsive.csv")
-write.csv(rbind(res1A,res1B,res1C,res1D),"Table 2F. Univariate CQC regression ORs and CIs - Responsive.csv")
-
-# Fir ordered logit model - MULTIVARIATE
-m <- polr(Responsive ~ IMD2019.QUINTILE + LIST.SIZE.QUINTILE + PERCENT.MALE.QUINTILE + PERCENT.OVER65.QUINTILE, data = data.all, Hess=TRUE)
-summary(m)
-ctable <- coef(summary(m)) # store table of coefficient results
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2 # calculate p values
-ctable <- cbind(ctable, "p value" = p) # combine tables HERE: Note p value for any independent variables
-ci <- confint.default(m) # Alternative CIs, assuming normality
-res4 <- exp(cbind(OR = coef(m), ci)) # Table of ORs and CIs HERE: Note OR and 95% CI for any independent variables
-res3 <- ctable
-
-write.csv(res3,"Table 3F. Multivariate CQC regression raw values - Responsive.csv")
-write.csv(res4,"Table 4F. Multivariate CQC regression ORs and CIs - Responsive.csv")
